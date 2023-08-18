@@ -1,0 +1,41 @@
+
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
+    id 'application'
+}
+
+group 'com.github.mirnana.bureauchain'
+version '1.0-SNAPSHOT'
+
+dependencies {
+    
+    implementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.4.1'
+    implementation 'org.json:json:+'
+    implementation 'com.owlike:genson:1.5'
+    testImplementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.4.1'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://jitpack.io'
+    }
+}
+
+application {
+    mainClass = 'org.hyperledger.fabric.contract.ContractRouter'
+}
+
+mainClassName = 'org.hyperledger.fabric.contract.ContractRouter'
+
+shadowJar {
+    baseName = 'chaincode'
+    version = null
+    classifier = null
+
+    manifest {
+        attributes 'Main-Class': 'org.hyperledger.fabric.contract.ContractRouter'
+    }
+}
+
+installDist.dependsOn check
