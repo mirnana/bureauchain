@@ -62,7 +62,7 @@ CREATE TABLE institution
    , institutionName       VARCHAR(200)   NOT NULL 
    , parentInstitutionID   INTEGER
    , email                 VARCHAR(100)
-   , country               VARCHAR(50)                -- standard abbreviation of the country's name 
+   , country               VARCHAR(50)
    , city                  VARCHAR(50)
    
    , CONSTRAINT pkInstitution

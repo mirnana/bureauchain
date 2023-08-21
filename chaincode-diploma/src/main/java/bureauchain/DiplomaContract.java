@@ -53,35 +53,36 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
-	public void createDiploma(Context ctx, String diplomaID, String OIB, String name, String surname,
-			String dateOfBirth, String placeOfBirth, String dateOfIssue, String university, String faculty,
-			String department, String study, String level, String academicDegree, String studyType) {
+	public void createDiploma(Context ctx, String diplomaID, String nationalID, String firstName, String lastName,
+			String dateOfBirth, String placeOfBirth, String dateOfIssue, String institution,
+			String course, String level, String degree) {
 
 		if (diplomaExists(ctx, diplomaID)) {
 			throw new ChaincodeException("The diploma " + diplomaID + " already exists");
 		}
 
 		Diploma diploma = new Diploma(
-				diplomaID, OIB, name, surname, dateOfBirth, placeOfBirth, dateOfIssue, university, faculty, department,
-				study, level, academicDegree, studyType);
+				diplomaID, nationalID, firstName, lastName, dateOfBirth, placeOfBirth, dateOfIssue, institution,
+				course, level, degree);
 
 		String sortedJSON = genson.serialize(diploma);
 		ctx.getStub().putStringState(diplomaID, sortedJSON);
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
-	public void updateDiploma(Context ctx, String diplomaID, String newOIB, String newName, String newSurname,
-			String newDateOfBirth, String newPlaceOfBirth, String newDateOfIssue, String newUniversity,
-			String newFaculty, String newDepartment, String newStudy, String newLevel, String newAcademicDegree,
-			String newStudyType) {
+	public void updateDiploma(Context ctx, String diplomaID, String newNationalID, String newFirstName,
+			String newLastName,
+			String newDateOfBirth, String newPlaceOfBirth, String newDateOfIssue, String newInstitution,
+			String newCourse, String newLevel, String newDegree) {
 
 		if (!diplomaExists(ctx, diplomaID)) {
 			throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
 		}
 
 		Diploma diploma = new Diploma(
-				diplomaID, newOIB, newName, newSurname, newDateOfBirth, newPlaceOfBirth, newDateOfIssue, newUniversity,
-				newFaculty, newDepartment, newStudy, newLevel, newAcademicDegree, newStudyType);
+				diplomaID, newNationalID, newFirstName, newLastName, newDateOfBirth, newPlaceOfBirth, newDateOfIssue,
+				newInstitution,
+				newCourse, newLevel, newDegree);
 
 		String sortedJSON = genson.serialize(diploma);
 		ctx.getStub().putStringState(diplomaID, sortedJSON);
