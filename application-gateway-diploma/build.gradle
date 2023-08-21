@@ -16,6 +16,7 @@ dependencies {
     compileOnly 'io.grpc:grpc-api:1.54.1'
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.54.1'
     implementation 'com.google.code.gson:gson:2.10.1'
+    implementation "mysql:mysql-connector-java:8.0.15"
 }
 
 java {
@@ -27,4 +28,8 @@ java {
 application {
     
     mainClass = 'App'
+}
+
+run {
+    standardInput = System.in
 }

@@ -31,19 +31,23 @@ import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.cert.CertificateException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.concurrent.TimeUnit;
+import java.util.Scanner;
+import java.sql.*;
 
 public final class App {
 	private static final String MSP_ID = System.getenv().getOrDefault("MSP_ID", "Org1MSP");
 	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
-	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "basic");
+	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "diploma");
 
 	// Path to crypto materials.
 	private static final Path CRYPTO_PATH = Paths
-			.get("../../test-network/organizations/peerOrganizations/org1.example.com");
+			.get("../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com");
 	// Path to user certificate.
 	private static final Path CERT_PATH = CRYPTO_PATH
-			.resolve(Paths.get("users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem"));
+			.resolve(Paths.get("users/User1@org1.example.com/msp/signcerts/cert.pem"));
 	// Path to user private key directory.
 	private static final Path KEY_DIR_PATH = CRYPTO_PATH
 			.resolve(Paths.get("users/User1@org1.example.com/msp/keystore"));
@@ -53,6 +57,12 @@ public final class App {
 	// Gateway peer end point.
 	private static final String PEER_ENDPOINT = "localhost:7051";
 	private static final String OVERRIDE_AUTH = "peer0.org1.example.com";
+
+	// Database connection details
+	private static final String DB_URL = "jdbc:mysql://localhost:3306/bureau?useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Zagreb";
+	// 3306 is the default port for MySQL
+	private static final String DB_USERNAME = "user";
+	private static final String DB_PASSWORD = "password";
 
 	private final Contract contract;
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
@@ -115,16 +125,31 @@ public final class App {
 		contract = network.getContract(CHAINCODE_NAME);
 	}
 
-	public void run() throws GatewayException, CommitException {
+	public void run() throws GatewayException, CommitException, SQLException, Exception, DateTimeParseException {
 
-		// Create a new asset on the ledger.
-		createAsset();
-
-		// Get the asset details by assetID.
-		readAssetById();
-
-		// Update an asset which does not exist.
-		updateNonExistentAsset();
+		Scanner sc = new Scanner(System.in);
+		while (true) {
+			System.out.println("Enter: s to create a single diploma by student ID");
+			System.out.println("       d to create multiple diplomas by date of defence of thesis");
+			System.out.println("       x to exit");
+			String str = sc.nextLine();
+			if (str.equals("s")) {
+				System.out.println("Insert student ID:");
+				String studentID = sc.nextLine();
+				createDiplomaByStudentID(studentID);
+			} else if (str.equals("d")) {
+				System.out.println("Insert date in format YYYY-MM-dd:");
+				String dateStr = sc.nextLine();
+				try {
+					LocalDate date = LocalDate.parse(dateStr);
+					createDiplomasByDateOfDefence(dateStr);
+				} catch (DateTimeParseException dtpe) {
+					System.out.println("Unable to parse date");
+				}
+			} else if (str.equals("x"))
+				break;
+		}
+		sc.close();
 	}
 
 	/**
@@ -232,6 +257,171 @@ public final class App {
 			e.printStackTrace(System.out);
 			System.out.println("Transaction ID: " + e.getTransactionId());
 			System.out.println("Status code: " + e.getCode());
+		}
+	}
+
+	public void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
+		try {
+			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+			Statement stmt = c.createStatement();
+
+			ResultSet rs = stmt.executeQuery(
+					"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth, institutionID " +
+							"  FROM student " +
+							" WHERE studentID = '" + studentID + "' ;");
+			int rowCount = 0;
+			if (rs.last()) {
+				rowCount = rs.getRow();
+			}
+			if (rowCount == 0) {
+				throw new Exception("Student with studentID " + studentID + " does not exist");
+			}
+			rs.first(); // only one row expected as 'studentID' is the primary key
+			String nationalID = rs.getString("nationalID");
+			String firstName = rs.getString("firstName");
+			String lastName = rs.getString("lastName");
+			Date dateOfBirth = rs.getDate("dateOfBirth");
+			String placeOfBirth = rs.getString("placeOfBirth");
+			String institutionID = rs.getString("institutionID");
+			String institutionID2 = institutionID;
+
+			String institution = "";
+			String parentInstitutionID = "";
+			boolean firstIteration = true;
+			do {
+				rs = stmt.executeQuery(
+						"SELECT institutionName, parentInstitutionID " +
+								"  FROM institution " +
+								" WHERE institutionID = '" + institutionID + "' ;");
+				rs.first();
+				if (firstIteration) {
+					firstIteration = false;
+				} else {
+					institution += ", ";
+				}
+				institution += rs.getString("institutionName");
+				institutionID = parentInstitutionID = rs.getString("parentInstitutionID");
+			} while (parentInstitutionID != null);
+
+			rs = stmt.executeQuery(
+					"SELECT courseID, degree " +
+							"  FROM defenceOfThesis " +
+							" WHERE institutionID = '" + institutionID2 + "' " +
+							"   AND studentID = '" + studentID + "' " +
+							"	AND grade IS NOT NULL " +
+							"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
+							"LIMIT 1;");
+			rowCount = 0;
+			if (rs.last()) {
+				rowCount = rs.getRow();
+			}
+			if (rowCount == 0) {
+				throw new Exception("Student with studentID " + studentID + " has not defended any theses");
+			}
+			rs.first();
+			String courseID = rs.getString("courseID");
+			String degree = rs.getString("degree");
+
+			rs = stmt.executeQuery(
+					"SELECT courseName, levelOfStudy " +
+							"  FROM course " +
+							" WHERE courseID = '" + courseID + "' " +
+							"   AND institutionID = '" + institutionID2 + "' ;");
+			rs.first();
+			String courseName = rs.getString("courseName");
+			String levelOfStudy = rs.getString("levelOfStudy");
+
+			c.close();
+
+			String diplomaID = "diploma" + Instant.now().toEpochMilli();
+			contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
+					dateOfBirth.toString(), placeOfBirth,
+					LocalDate.now().toString(), institution, courseName, levelOfStudy, degree);
+			System.out.println("Successfully created new diploma " + diplomaID);
+
+		} catch (Exception e) {
+			System.out.println("ERROR creating diploma by ID: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	public void createDiplomasByDateOfDefence(String dateOfDefence) {
+		try {
+			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+			Statement stmt = c.createStatement();
+
+			ResultSet rs = stmt.executeQuery(
+					"SELECT institutionID, courseID, studentID, degree " +
+							"  FROM defenceOfThesis " +
+							" WHERE dateOfDefence = '" + dateOfDefence + "' " +
+							"   AND grade IS NOT NULL;");
+			int rowCount = 0;
+			if (rs.last()) {
+				rowCount = rs.getRow();
+				rs.beforeFirst();
+			}
+			if (rowCount == 0) {
+				throw new Exception("No defences found on date " + dateOfDefence);
+			}
+			while (rs.next()) {
+				String institutionID = rs.getString("institutionID");
+				String institutionID2 = institutionID;
+				String courseID = rs.getString("courseID");
+				String studentID = rs.getString("studentID");
+				String degree = rs.getString("degree");
+
+				Statement stmt2 = c.createStatement();
+
+				String institution = "";
+				String parentInstitutionID = "";
+				boolean firstIteration = true;
+				do {
+					ResultSet rs2 = stmt2.executeQuery(
+							"SELECT institutionName, parentInstitutionID " +
+									"  FROM institution " +
+									" WHERE institutionID = '" + institutionID + "' ;");
+					rs2.first();
+					if (firstIteration) {
+						firstIteration = false;
+					} else {
+						institution += ", ";
+					}
+					institution += rs2.getString("institutionName");
+					institutionID = parentInstitutionID = rs2.getString("parentInstitutionID");
+				} while (parentInstitutionID != null);
+
+				ResultSet rs2 = stmt2.executeQuery(
+						"SELECT courseName, levelOfStudy " +
+								"  FROM course " +
+								" WHERE courseID = " + courseID +
+								"   AND institutionID = " + institutionID2 + ";");
+				rs2.first();
+				String courseName = rs2.getString("courseName");
+				String levelOfStudy = rs2.getString("levelOfStudy");
+
+				rs2 = stmt2.executeQuery(
+						"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth " +
+								"  FROM student " +
+								" WHERE studentID = '" + studentID + "' ;");
+				rs2.first();
+				String nationalID = rs2.getString("nationalID");
+				String firstName = rs2.getString("firstName");
+				String lastName = rs2.getString("lastName");
+				Date dateOfBirth = rs2.getDate("dateOfBirth");
+				String placeOfBirth = rs2.getString("placeOfBirth");
+
+				String diplomaID = "diploma" + Instant.now().toEpochMilli();
+				contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
+						dateOfBirth.toString(), placeOfBirth,
+						LocalDate.now().toString(), institution, courseName, levelOfStudy, degree);
+				System.out.println("Successfully created new diploma " + diplomaID);
+			}
+
+			c.close();
+
+		} catch (Exception e) {
+			System.out.println("ERROR creating diploma by date of defence: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }
