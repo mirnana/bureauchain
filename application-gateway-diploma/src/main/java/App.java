@@ -129,15 +129,39 @@ public final class App {
 
 		Scanner sc = new Scanner(System.in);
 		while (true) {
-			System.out.println("Enter: s to create a single diploma by student ID");
-			System.out.println("       d to create multiple diplomas by date of defence of thesis");
+			System.out.println("Enter: r to read diploma by ID");
+			System.out.println("       a to read all diplomas");
+			System.out.println("       n to read diploma by the owner's name");
+			System.out.println("       i to read diploma by the owner's national ID");
+			System.out.println("       s to create a single diploma by student ID");
+			System.out.println("       t to create multiple diplomas by date of defence of thesis");
+			System.out.println("       u to update a diploma");
+			System.out.println("       d to delete a diploma");
 			System.out.println("       x to exit");
+
 			String str = sc.nextLine();
-			if (str.equals("s")) {
+
+			if (str.equals("r")) {
+				System.out.println("Insert diploma ID:");
+				String diplomaID = sc.nextLine();
+				readDiploma(diplomaID);
+			} else if (str.equals("a")) {
+				getAllDiplomas();
+			} else if (str.equals("n")) {
+				System.out.println("Insert first name:");
+				String firstName = sc.nextLine();
+				System.out.println("Insert last name:");
+				String lastName = sc.nextLine();
+				readDiplomaByName(firstName, lastName);
+			} else if (str.equals("i")) {
+				System.out.println("Insert national ID:");
+				String nationalID = sc.nextLine();
+				readDiplomaByNationalID(nationalID);
+			} else if (str.equals("s")) {
 				System.out.println("Insert student ID:");
 				String studentID = sc.nextLine();
 				createDiplomaByStudentID(studentID);
-			} else if (str.equals("d")) {
+			} else if (str.equals("t")) {
 				System.out.println("Insert date in format YYYY-MM-dd:");
 				String dateStr = sc.nextLine();
 				try {
@@ -146,22 +170,41 @@ public final class App {
 				} catch (DateTimeParseException dtpe) {
 					System.out.println("Unable to parse date");
 				}
-			} else if (str.equals("x"))
+			} else if (str.equals("u")) {
+				System.out.println("Insert diplomaID:");
+				String diplomaID = sc.nextLine();
+				System.out.println("Insert nationalID:");
+				String nationalID = sc.nextLine();
+				System.out.println("Insert firstName:");
+				String firstName = sc.nextLine();
+				System.out.println("Insert lastName:");
+				String lastName = sc.nextLine();
+				System.out.println("Insert dateOfBirth:");
+				String dateOfBirth = sc.nextLine();
+				System.out.println("Insert placeOfBirth:");
+				String placeOfBirth = sc.nextLine();
+				System.out.println("Insert dateOfIssue:");
+				String dateOfIssue = sc.nextLine();
+				System.out.println("Insert institution:");
+				String institution = sc.nextLine();
+				System.out.println("Insert course:");
+				String course = sc.nextLine();
+				System.out.println("Insert level:");
+				String level = sc.nextLine();
+				System.out.println("Insert degree:");
+				String degree = sc.nextLine();
+				updateDiploma(diplomaID, nationalID, firstName, lastName, dateOfBirth, placeOfBirth, dateOfIssue,
+						institution, course, level, degree);
+			} else if (str.equals("d")) {
+				System.out.println("Insert diploma ID:");
+				String diplomaID = sc.nextLine();
+				deleteDiploma(diplomaID);
+			} else if (str.equals("x")) {
+				System.out.println("Bye");
 				break;
+			}
 		}
 		sc.close();
-	}
-
-	/**
-	 * Evaluate a transaction to query ledger state.
-	 */
-	private void getAllAssets() throws GatewayException {
-		System.out.println(
-				"\n--> Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger");
-
-		var result = contract.evaluateTransaction("GetAllAssets");
-
-		System.out.println("*** Result: " + prettyJson(result));
 	}
 
 	private String prettyJson(final byte[] json) {
@@ -173,98 +216,36 @@ public final class App {
 		return gson.toJson(parsedJson);
 	}
 
-	/**
-	 * Submit a transaction synchronously, blocking until it has been committed to
-	 * the ledger.
-	 */
-	private void createAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println(
-				"\n--> Submit Transaction: CreateAsset, creates new asset with ID, Color, Size, Owner and AppraisedValue arguments");
+	private void readDiploma(String diplomaID) throws GatewayException {
 
-		contract.submitTransaction("createDiploma", assetId, "55499041797", "mirna", "imrovic", "1999-02-01", "zagreb",
-				"2023-08-15", "unizg", "pmf", "mo", "racunarstvo", "dipl", "mag. math. et inf.", "znanstveni");
-
-		System.out.println("*** Transaction committed successfully");
+		var result = contract.evaluateTransaction("readDiploma", diplomaID);
+		System.out.println(prettyJson(result));
 	}
 
-	/**
-	 * Submit transaction asynchronously, allowing the application to process the
-	 * smart contract response (e.g. update a UI) while waiting for the commit
-	 * notification.
-	 */
-	private void transferAssetAsync() throws EndorseException, SubmitException, CommitStatusException {
-		System.out.println("\n--> Async Submit Transaction: TransferAsset, updates existing asset owner");
+	private void getAllDiplomas() throws GatewayException {
 
-		var commit = contract.newProposal("TransferAsset")
-				.addArguments(assetId, "Saptha")
-				.build()
-				.endorse()
-				.submitAsync();
-
-		var result = commit.getResult();
-		var oldOwner = new String(result, StandardCharsets.UTF_8);
-
-		System.out.println(
-				"*** Successfully submitted transaction to transfer ownership from " + oldOwner + " to Saptha");
-		System.out.println("*** Waiting for transaction commit");
-
-		var status = commit.getStatus();
-		if (!status.isSuccessful()) {
-			throw new RuntimeException("Transaction " + status.getTransactionId() +
-					" failed to commit with status code " + status.getCode());
-		}
-
-		System.out.println("*** Transaction committed successfully");
+		var result = contract.evaluateTransaction("getAllDiplomas");
+		System.out.println(prettyJson(result));
 	}
 
-	private void readAssetById() throws GatewayException {
-		System.out.println("\n--> Evaluate Transaction: ReadAsset, function returns asset attributes");
+	private void readDiplomaByName(String firstName, String lastName) throws GatewayException {
 
-		var evaluateResult = contract.evaluateTransaction("readDiploma", assetId);
-
-		System.out.println("*** Result:" + prettyJson(evaluateResult));
+		var result = contract.evaluateTransaction("queryDiplomasByName", firstName, lastName);
+		System.out.println(prettyJson(result));
 	}
 
-	/**
-	 * submitTransaction() will throw an error containing details of any error
-	 * responses from the smart contract.
-	 */
-	private void updateNonExistentAsset() {
-		try {
-			System.out.println(
-					"\n--> Submit Transaction: UpdateAsset asset70, asset70 does not exist and should return an error");
+	private void readDiplomaByNationalID(String nationalID) throws GatewayException {
 
-			contract.submitTransaction("UpdateAsset", "diploma1", "55499041797", "mirna", "imrovic", "1999-02-01",
-					"zagreb", "2023-08-15", "unizg", "pmf", "mo", "racunarstvo", "preddipl", "mag. math. et inf.",
-					"znanstveni");
-
-			System.out.println("******** FAILED to return an error");
-		} catch (EndorseException | SubmitException | CommitStatusException e) {
-			System.out.println("*** Successfully caught the error: ");
-			e.printStackTrace(System.out);
-			System.out.println("Transaction ID: " + e.getTransactionId());
-
-			var details = e.getDetails();
-			if (!details.isEmpty()) {
-				System.out.println("Error Details:");
-				for (var detail : details) {
-					System.out.println("- address: " + detail.getAddress() + ", mspId: " + detail.getMspId()
-							+ ", message: " + detail.getMessage());
-				}
-			}
-		} catch (CommitException e) {
-			System.out.println("*** Successfully caught the error: " + e);
-			e.printStackTrace(System.out);
-			System.out.println("Transaction ID: " + e.getTransactionId());
-			System.out.println("Status code: " + e.getCode());
-		}
+		var result = contract.evaluateTransaction("queryDiplomasByNationalID", nationalID);
+		System.out.println(prettyJson(result));
 	}
 
-	public void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
+	private void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
 		try {
 			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
 			Statement stmt = c.createStatement();
 
+			System.out.println("... querying the local relational database ...");
 			ResultSet rs = stmt.executeQuery(
 					"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth, institutionID " +
 							"  FROM student " +
@@ -332,6 +313,7 @@ public final class App {
 			String levelOfStudy = rs.getString("levelOfStudy");
 
 			c.close();
+			System.out.println("... data from relational database retreived ...");
 
 			String diplomaID = "diploma" + Instant.now().toEpochMilli();
 			contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
@@ -340,12 +322,11 @@ public final class App {
 			System.out.println("Successfully created new diploma " + diplomaID);
 
 		} catch (Exception e) {
-			System.out.println("ERROR creating diploma by ID: " + e.getMessage());
-			e.printStackTrace();
+			System.out.println("ERROR while creating diploma by ID: " + e.getMessage());
 		}
 	}
 
-	public void createDiplomasByDateOfDefence(String dateOfDefence) {
+	private void createDiplomasByDateOfDefence(String dateOfDefence) {
 		try {
 			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
 			Statement stmt = c.createStatement();
@@ -420,8 +401,30 @@ public final class App {
 			c.close();
 
 		} catch (Exception e) {
-			System.out.println("ERROR creating diploma by date of defence: " + e.getMessage());
-			e.printStackTrace();
+			System.out.println(
+					"ERROR while creating diploma by date of defence: " + e.getMessage());
+		}
+	}
+
+	private void updateDiploma(String diplomaID, String nationalID, String firstName,
+			String lastName,
+			String dateOfBirth, String placeOfBirth, String dateOfIssue, String institution,
+			String course, String level, String degree) {
+
+		try {
+			contract.evaluateTransaction("updateDiploma", diplomaID, nationalID, firstName, lastName,
+					dateOfBirth, placeOfBirth, dateOfIssue, institution, course, level, degree);
+		} catch (Exception e) {
+			System.out.println("ERROR while updating diploma: " + e.getMessage());
+		}
+	}
+
+	private void deleteDiploma(String diplomaID) {
+
+		try {
+			contract.submitTransaction("deleteDiploma", diplomaID);
+		} catch (Exception e) {
+			System.out.println("ERROR while deleting diploma: " + e.getMessage());
 		}
 	}
 }
