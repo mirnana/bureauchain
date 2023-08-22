@@ -1,0 +1,10 @@
+{
+  "index": {
+    "fields": [
+      "nationalID"
+    ]
+  },
+  "ddoc": "indexNationalIDDoc",
+  "name": "indexNationalID",
+  "type": "json"
+}

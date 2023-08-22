@@ -6,6 +6,8 @@ import org.hyperledger.fabric.contract.annotation.Contract;
 import org.hyperledger.fabric.contract.annotation.Default;
 import org.hyperledger.fabric.contract.annotation.Transaction;
 import org.hyperledger.fabric.shim.ChaincodeException;
+import org.hyperledger.fabric.shim.ledger.KeyValue;
+import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
 import org.hyperledger.fabric.contract.annotation.Contact;
 import org.hyperledger.fabric.contract.annotation.Info;
@@ -13,7 +15,9 @@ import org.hyperledger.fabric.contract.annotation.License;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import com.owlike.genson.Genson;
 
@@ -96,5 +100,62 @@ public class DiplomaContract implements ContractInterface {
 		}
 
 		ctx.getStub().delState(diplomaID);
+	}
+
+	@Transaction(intent = Transaction.TYPE.EVALUATE)
+	public String getAllDiplomas(final Context ctx) {
+
+		// ChaincodeStub stub = ctx.getStub();
+		List<Diploma> queryResults = new ArrayList<Diploma>();
+
+		QueryResultsIterator<KeyValue> results = ctx.getStub().getStateByRange("", "");
+
+		for (KeyValue result : results) {
+			Diploma diploma = genson.deserialize(result.getStringValue(), Diploma.class);
+			System.out.println(diploma);
+			queryResults.add(diploma);
+		}
+
+		final String response = genson.serialize(queryResults);
+
+		return response;
+	}
+
+	@Transaction(intent = Transaction.TYPE.EVALUATE)
+	public Diploma[] queryDiplomasByName(final Context ctx, final String firstName, final String lastName)
+			throws Exception, UnsupportedOperationException {
+		String selector = String.format(
+				"{\"selector\":{\"firstName\":\"%s\",\"lastName\":\"%s\"}, \"use_index\":[\"/indexNameDoc\", \"indexName\"]}",
+				firstName, lastName);
+		return getQueryResult(ctx, selector);
+	}
+
+	@Transaction(intent = Transaction.TYPE.EVALUATE)
+	public Diploma[] queryDiplomasByNationalID(final Context ctx, final String nationalID)
+			throws Exception, UnsupportedOperationException {
+		String selector = String.format(
+				"{\"selector\":{\"nationalID\":\"%s\"}, \"use_index\":[\"/indexNationalIDDoc\", \"indexNationalID\"]}",
+				nationalID);
+		return getQueryResult(ctx, selector);
+	}
+
+	private Diploma[] getQueryResult(final Context ctx, final String selector)
+			throws Exception, UnsupportedOperationException {
+
+		List<Diploma> queryResults = new ArrayList<Diploma>();
+
+		try (QueryResultsIterator<KeyValue> results = ctx.getStub().getQueryResult(selector)) {
+
+			for (KeyValue result : results) {
+				if (result.getStringValue() == null || result.getStringValue().length() == 0) {
+					System.out.println("HERE!");
+					continue;
+				}
+				Diploma diploma = genson.deserialize(result.getStringValue(), Diploma.class);
+				queryResults.add(diploma);
+			}
+		}
+
+		return queryResults.toArray(new Diploma[0]);
 	}
 }
