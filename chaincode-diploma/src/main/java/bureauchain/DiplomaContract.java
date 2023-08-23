@@ -21,7 +21,13 @@ import java.util.List;
 
 import com.owlike.genson.Genson;
 
-@Contract(name = "DiplomaContract", info = @Info(title = "Diploma Contract", description = "A smart contract that represents a college diploma being issued"))
+@Contract(
+	name = "DiplomaContract", 
+	info = @Info(
+		title = "Diploma Contract", 
+		description = "A smart contract that represents a college diploma being issued"
+	)
+)
 @Default
 public class DiplomaContract implements ContractInterface {
 
@@ -31,13 +37,15 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public boolean diplomaExists(final Context ctx, final String diplomaID) {
+	public boolean diplomaExists( final Context ctx
+								, final String diplomaID) {
 		String diplomaJSON = ctx.getStub().getStringState(diplomaID);
 		return (diplomaJSON != null && !diplomaJSON.isEmpty());
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public Diploma readDiploma(final Context ctx, final String diplomaID) {
+	public Diploma readDiploma(   final Context ctx
+								, final String diplomaID) {
 		Diploma diploma = null;
 		try {
 			if (!diplomaExists(ctx, diplomaID)) {
@@ -57,7 +65,12 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
-	public void createDiploma(Context ctx, String diplomaID, String nationalID, String firstName, String lastName,
+	public void createDiploma(Context ctx
+							, String diplomaID
+							, String nationalID
+							, String firstName
+							, String lastName
+							,
 			String dateOfBirth, String placeOfBirth, String dateOfIssue, String institution,
 			String course, String level, String degree) {
 

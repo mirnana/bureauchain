@@ -1,8 +1,3 @@
-/*
- * Copyright IBM Corp. All Rights Reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -38,34 +33,42 @@ import java.util.Scanner;
 import java.sql.*;
 
 public final class App {
-	private static final String MSP_ID = System.getenv().getOrDefault("MSP_ID", "Org1MSP");
-	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
-	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "diploma");
+	private static final String MSP_ID 			= System.getenv().getOrDefault("MSP_ID", "Org1MSP");
+	private static final String CHANNEL_NAME 	= System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
+	private static final String CHAINCODE_NAME	= System.getenv().getOrDefault("CHAINCODE_NAME", "diploma");
 
 	// Path to crypto materials.
-	private static final Path CRYPTO_PATH = Paths
-			.get("../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com");
+	private static final Path CRYPTO_PATH = Paths.get(
+		"../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com"
+	);
 	// Path to user certificate.
-	private static final Path CERT_PATH = CRYPTO_PATH
-			.resolve(Paths.get("users/User1@org1.example.com/msp/signcerts/cert.pem"));
+	private static final Path CERT_PATH = CRYPTO_PATH.resolve(
+		Paths.get("users/User1@org1.example.com/msp/signcerts/cert.pem")
+	);
 	// Path to user private key directory.
-	private static final Path KEY_DIR_PATH = CRYPTO_PATH
-			.resolve(Paths.get("users/User1@org1.example.com/msp/keystore"));
+	private static final Path KEY_DIR_PATH = CRYPTO_PATH.resolve(
+		Paths.get("users/User1@org1.example.com/msp/keystore")
+	);
 	// Path to peer tls certificate.
-	private static final Path TLS_CERT_PATH = CRYPTO_PATH.resolve(Paths.get("peers/peer0.org1.example.com/tls/ca.crt"));
+	private static final Path TLS_CERT_PATH = CRYPTO_PATH.resolve(
+		Paths.get("peers/peer0.org1.example.com/tls/ca.crt")
+	);
 
 	// Gateway peer end point.
 	private static final String PEER_ENDPOINT = "localhost:7051";
 	private static final String OVERRIDE_AUTH = "peer0.org1.example.com";
 
 	// Database connection details
-	private static final String DB_URL = "jdbc:mysql://localhost:3306/bureau?useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Zagreb";
+	private static final String DB_URL = "jdbc:mysql://localhost:3306/bureau" +
+											"?useSSL=false" + 
+											"&useJDBCCompliantTimezoneShift=true" + 
+											"&useLegacyDatetimeCode=false" + 
+											"&serverTimezone=Europe/Zagreb";
 	// 3306 is the default port for MySQL
 	private static final String DB_USERNAME = "user";
 	private static final String DB_PASSWORD = "password";
 
 	private final Contract contract;
-	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
 	public static void main(final String[] args) throws Exception {
@@ -131,8 +134,7 @@ public final class App {
 		while (true) {
 			System.out.println("Enter: r to read diploma by ID");
 			System.out.println("       a to read all diplomas");
-			System.out.println(
-					"       p to read diploma by nationalID, institution, course, level (i.e. the primary key)");
+			System.out.println("       p to read diploma by nationalID, institution, course, level (i.e. the primary key)");
 			System.out.println("       n to read diploma by the owner's name");
 			System.out.println("       i to read diploma by the owner's national ID");
 			System.out.println("       s to create a single diploma by student ID");
@@ -146,7 +148,11 @@ public final class App {
 			if (str.equals("r")) {
 				System.out.println("Insert diploma ID:");
 				String diplomaID = sc.nextLine();
-				System.out.println(readDiploma(diplomaID));
+				try {
+					System.out.println(readDiploma(diplomaID));
+				} catch(Exception e) {
+					System.out.println("ERROR reading diploma: " + e.getMessage());
+				}
 			} else if (str.equals("a")) {
 				System.out.println(getAllDiplomas());
 			} else if (str.equals("p")) {
@@ -158,13 +164,17 @@ public final class App {
 				String course = sc.nextLine();
 				System.out.println("Insert level:");
 				String level = sc.nextLine();
-				System.out.println(readDiplomaByPrimKey(nationalID, institution, course, level));
+				System.out.println(readDiplomaByPrimKey(  nationalID
+														, institution
+														, course
+														, level));
 			} else if (str.equals("n")) {
 				System.out.println("Insert first name:");
 				String firstName = sc.nextLine();
 				System.out.println("Insert last name:");
 				String lastName = sc.nextLine();
-				System.out.println(readDiplomaByName(firstName, lastName));
+				System.out.println(readDiplomaByName( firstName
+													, lastName));
 			} else if (str.equals("i")) {
 				System.out.println("Insert national ID:");
 				String nationalID = sc.nextLine();
@@ -205,8 +215,17 @@ public final class App {
 				String level = sc.nextLine();
 				System.out.println("Insert degree:");
 				String degree = sc.nextLine();
-				updateDiploma(diplomaID, nationalID, firstName, lastName, dateOfBirth, placeOfBirth, dateOfIssue,
-						institution, course, level, degree);
+				updateDiploma(diplomaID
+							, nationalID
+							, firstName
+							, lastName
+							, dateOfBirth
+							, placeOfBirth
+							, dateOfIssue
+							, institution
+							, course
+							, level
+							, degree);
 			} else if (str.equals("d")) {
 				System.out.println("Insert diploma ID:");
 				String diplomaID = sc.nextLine();
@@ -240,16 +259,25 @@ public final class App {
 		return prettyJson(result);
 	}
 
-	private String readDiplomaByPrimKey(String nationalID, String institution, String course, String level)
-			throws GatewayException {
+	private String readDiplomaByPrimKey(  String nationalID
+										, String institution
+										, String course
+										, String level) throws GatewayException {
 
-		var result = contract.evaluateTransaction("queryDiplomasByPrimKey", nationalID, institution, course, level);
+		var result = contract.evaluateTransaction("queryDiplomasByPrimKey"
+												, nationalID
+												, institution
+												, course
+												, level);
 		return prettyJson(result);
 	}
 
-	private String readDiplomaByName(String firstName, String lastName) throws GatewayException {
+	private String readDiplomaByName( String firstName
+									, String lastName) throws GatewayException {
 
-		var result = contract.evaluateTransaction("queryDiplomasByName", firstName, lastName);
+		var result = contract.evaluateTransaction("queryDiplomasByName"
+												, firstName
+												, lastName);
 		return prettyJson(result);
 	}
 
@@ -267,8 +295,8 @@ public final class App {
 			System.out.println("... querying the local relational database ...");
 			ResultSet rs = stmt.executeQuery(
 					"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth, institutionID " +
-							"  FROM student " +
-							" WHERE studentID = '" + studentID + "' ;");
+					"  FROM student " +
+					" WHERE studentID = '" + studentID + "' ;");
 			int rowCount = 0;
 			if (rs.last()) {
 				rowCount = rs.getRow();
@@ -277,22 +305,22 @@ public final class App {
 				throw new Exception("Student with studentID " + studentID + " does not exist");
 			}
 			rs.first(); // only one row expected as 'studentID' is the primary key
-			String nationalID = rs.getString("nationalID");
-			String firstName = rs.getString("firstName");
-			String lastName = rs.getString("lastName");
-			Date dateOfBirth = rs.getDate("dateOfBirth");
-			String placeOfBirth = rs.getString("placeOfBirth");
-			String institutionID = rs.getString("institutionID");
-			String institutionID2 = institutionID;
+			String nationalID 		= rs.getString("nationalID");
+			String firstName 		= rs.getString("firstName");
+			String lastName 		= rs.getString("lastName");
+			Date dateOfBirth 		= rs.getDate("dateOfBirth");
+			String placeOfBirth 	= rs.getString("placeOfBirth");
+			String institutionID 	= rs.getString("institutionID");
+			String institutionID2 	= institutionID;
 
-			String institution = "";
-			String parentInstitutionID = "";
-			boolean firstIteration = true;
+			String institution 			= "";
+			String parentInstitutionID 	= "";
+			boolean firstIteration 		= true;
 			do {
 				rs = stmt.executeQuery(
 						"SELECT institutionName, parentInstitutionID " +
-								"  FROM institution " +
-								" WHERE institutionID = '" + institutionID + "' ;");
+						"  FROM institution " +
+						" WHERE institutionID = '" + institutionID + "' ;");
 				rs.first();
 				if (firstIteration) {
 					firstIteration = false;
@@ -305,12 +333,12 @@ public final class App {
 
 			rs = stmt.executeQuery(
 					"SELECT courseID, degree " +
-							"  FROM defenceOfThesis " +
-							" WHERE institutionID = '" + institutionID2 + "' " +
-							"   AND studentID = '" + studentID + "' " +
-							"	AND grade IS NOT NULL " +
-							"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
-							"LIMIT 1;");
+					"  FROM defenceOfThesis " +
+					" WHERE institutionID = '" + institutionID2 + "' " +
+					"   AND studentID = '" + studentID + "' " +
+					"	AND grade IS NOT NULL " +
+					"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
+					"LIMIT 1;");
 			rowCount = 0;
 			if (rs.last()) {
 				rowCount = rs.getRow();
@@ -320,13 +348,13 @@ public final class App {
 			}
 			rs.first();
 			String courseID = rs.getString("courseID");
-			String degree = rs.getString("degree");
+			String degree 	= rs.getString("degree");
 
 			rs = stmt.executeQuery(
 					"SELECT courseName, levelOfStudy " +
-							"  FROM course " +
-							" WHERE courseID = '" + courseID + "' " +
-							"   AND institutionID = '" + institutionID2 + "' ;");
+					"  FROM course " +
+					" WHERE courseID = '" + courseID + "' " +
+					"   AND institutionID = '" + institutionID2 + "' ;");
 			rs.first();
 			String courseName = rs.getString("courseName");
 			String levelOfStudy = rs.getString("levelOfStudy");
@@ -335,15 +363,27 @@ public final class App {
 			System.out.println("... data from relational database retreived ...");
 
 			System.out.println("... checking if diploma already exists ...");
-			String fromLedger = readDiplomaByPrimKey(nationalID, institution, courseName, levelOfStudy);
+			String fromLedger = readDiplomaByPrimKey( nationalID
+													, institution
+													, courseName
+													, levelOfStudy);
 			if (!fromLedger.equals("[]")) {
 				throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
 			}
 
 			String diplomaID = "diploma" + Instant.now().toEpochMilli();
-			contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
-					dateOfBirth.toString(), placeOfBirth,
-					LocalDate.now().toString(), institution, courseName, levelOfStudy, degree);
+			contract.submitTransaction("createDiploma"
+									, diplomaID
+									, nationalID
+									, firstName
+									, lastName
+									, dateOfBirth.toString()
+									, placeOfBirth
+									, LocalDate.now().toString()
+									, institution
+									, courseName
+									, levelOfStudy
+									, degree);
 			System.out.println("Successfully created new diploma " + diplomaID);
 
 		} catch (Exception e) {
@@ -360,9 +400,9 @@ public final class App {
 
 			ResultSet rs = stmt.executeQuery(
 					"SELECT institutionID, courseID, studentID, degree " +
-							"  FROM defenceOfThesis " +
-							" WHERE dateOfDefence = '" + dateOfDefence + "' " +
-							"   AND grade IS NOT NULL;");
+					"  FROM defenceOfThesis " +
+					" WHERE dateOfDefence = '" + dateOfDefence + "' " +
+					"   AND grade IS NOT NULL;");
 			int rowCount = 0;
 			if (rs.last()) {
 				rowCount = rs.getRow();
@@ -372,22 +412,22 @@ public final class App {
 				throw new Exception("No defences found on date " + dateOfDefence);
 			}
 			while (rs.next()) {
-				String institutionID = rs.getString("institutionID");
-				String institutionID2 = institutionID;
-				String courseID = rs.getString("courseID");
-				String studentID = rs.getString("studentID");
-				String degree = rs.getString("degree");
+				String institutionID 	= rs.getString("institutionID");
+				String institutionID2	= institutionID;
+				String courseID 		= rs.getString("courseID");
+				String studentID 		= rs.getString("studentID");
+				String degree 			= rs.getString("degree");
 
 				Statement stmt2 = c.createStatement();
 
-				String institution = "";
-				String parentInstitutionID = "";
-				boolean firstIteration = true;
+				String institution 			= "";
+				String parentInstitutionID 	= "";
+				boolean firstIteration 		= true;
 				do {
 					ResultSet rs2 = stmt2.executeQuery(
 							"SELECT institutionName, parentInstitutionID " +
-									"  FROM institution " +
-									" WHERE institutionID = '" + institutionID + "' ;");
+							"  FROM institution " +
+							" WHERE institutionID = '" + institutionID + "' ;");
 					rs2.first();
 					if (firstIteration) {
 						firstIteration = false;
@@ -400,34 +440,46 @@ public final class App {
 
 				ResultSet rs2 = stmt2.executeQuery(
 						"SELECT courseName, levelOfStudy " +
-								"  FROM course " +
-								" WHERE courseID = " + courseID +
-								"   AND institutionID = " + institutionID2 + ";");
+						"  FROM course " +
+						" WHERE courseID = " + courseID +
+						"   AND institutionID = " + institutionID2 + ";");
 				rs2.first();
-				String courseName = rs2.getString("courseName");
+				String courseName 	= rs2.getString("courseName");
 				String levelOfStudy = rs2.getString("levelOfStudy");
 
 				rs2 = stmt2.executeQuery(
 						"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth " +
-								"  FROM student " +
-								" WHERE studentID = '" + studentID + "' ;");
+						"  FROM student " +
+						" WHERE studentID = '" + studentID + "' ;");
 				rs2.first();
-				String nationalID = rs2.getString("nationalID");
-				String firstName = rs2.getString("firstName");
-				String lastName = rs2.getString("lastName");
-				Date dateOfBirth = rs2.getDate("dateOfBirth");
+				String nationalID 	= rs2.getString("nationalID");
+				String firstName 	= rs2.getString("firstName");
+				String lastName 	= rs2.getString("lastName");
+				Date dateOfBirth 	= rs2.getDate("dateOfBirth");
 				String placeOfBirth = rs2.getString("placeOfBirth");
 
 				System.out.println("... creating diploma for " + nationalID + " ...");
-				String fromLedger = readDiplomaByPrimKey(nationalID, institution, courseName, levelOfStudy);
+				String fromLedger = readDiplomaByPrimKey( nationalID
+														, institution
+														, courseName
+														, levelOfStudy);
 				if (!fromLedger.equals("[]")) {
 					throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
 				}
 
 				String diplomaID = "diploma" + Instant.now().toEpochMilli();
-				contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
-						dateOfBirth.toString(), placeOfBirth,
-						LocalDate.now().toString(), institution, courseName, levelOfStudy, degree);
+				contract.submitTransaction("createDiploma"
+										, diplomaID
+										, nationalID
+										, firstName
+										, lastName
+										, dateOfBirth.toString()
+										, placeOfBirth
+										, LocalDate.now().toString()
+										, institution
+										, courseName
+										, levelOfStudy
+										, degree);
 				System.out.println("Successfully created new diploma " + diplomaID);
 			}
 
@@ -439,14 +491,31 @@ public final class App {
 		}
 	}
 
-	private void updateDiploma(String diplomaID, String nationalID, String firstName,
-			String lastName,
-			String dateOfBirth, String placeOfBirth, String dateOfIssue, String institution,
-			String course, String level, String degree) {
+	private void updateDiploma(	  String diplomaID
+								, String nationalID
+								, String firstName
+								, String lastName
+								, String dateOfBirth
+								, String placeOfBirth
+								, String dateOfIssue
+								, String institution
+								, String course
+								, String level
+								, String degree) {
 
 		try {
-			contract.evaluateTransaction("updateDiploma", diplomaID, nationalID, firstName, lastName,
-					dateOfBirth, placeOfBirth, dateOfIssue, institution, course, level, degree);
+			contract.submitTransaction("updateDiploma"
+									, diplomaID
+									, nationalID
+									, firstName
+									, lastName
+									, dateOfBirth
+									, placeOfBirth
+									, dateOfIssue
+									, institution
+									, course
+									, level
+									, degree);
 			System.out.println("Update successful");
 		} catch (Exception e) {
 			System.out.println("ERROR while updating diploma: " + e.getMessage());

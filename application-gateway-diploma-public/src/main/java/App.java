@@ -38,9 +38,9 @@ import java.util.Scanner;
 import java.sql.*;
 
 public final class App {
-	private static final String MSP_ID = System.getenv().getOrDefault("MSP_ID", "Org2MSP");
-	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
-	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "diploma");
+	private static final String MSP_ID 			= System.getenv().getOrDefault("MSP_ID", "Org2MSP");
+	private static final String CHANNEL_NAME 	= System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
+	private static final String CHAINCODE_NAME 	= System.getenv().getOrDefault("CHAINCODE_NAME", "diploma");
 
 	// Path to crypto materials.
 	private static final Path CRYPTO_PATH = Paths
@@ -167,13 +167,16 @@ public final class App {
 
 	private String readDiplomaByName(String firstName, String lastName) throws GatewayException {
 
-		var result = contract.evaluateTransaction("queryDiplomasByName", firstName, lastName);
+		var result = contract.evaluateTransaction("queryDiplomasByName"
+												, firstName
+												, lastName);
 		return prettyJson(result);
 	}
 
 	private String readDiplomaByNationalID(String nationalID) throws GatewayException {
 
-		var result = contract.evaluateTransaction("queryDiplomasByNationalID", nationalID);
+		var result = contract.evaluateTransaction("queryDiplomasByNationalID"
+												, nationalID);
 		return prettyJson(result);
 	}	
 }
