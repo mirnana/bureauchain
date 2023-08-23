@@ -1,0 +1,13 @@
+{
+"index": {
+    "fields": [
+      "nationalID",
+      "institution",
+      "course",
+      "level"
+    ]
+  },
+  "ddoc": "indexPrimKeyDoc",
+  "name": "indexPrimKey",
+  "type": "json"
+}

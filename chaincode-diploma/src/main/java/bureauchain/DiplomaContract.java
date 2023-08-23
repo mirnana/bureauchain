@@ -122,6 +122,16 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
+	public Diploma[] queryDiplomasByPrimKey(final Context ctx, final String nationalID, final String institution,
+			final String course, final String level)
+			throws Exception, UnsupportedOperationException {
+		String selector = String.format(
+				"{\"selector\":{\"nationalID\":\"%s\",\"institution\":\"%s\",\"course\":\"%s\",\"level\":\"%s\"}, \"use_index\":[\"/indexPrimKeyDoc\", \"indexPrimKey\"]}",
+				nationalID, institution, course, level);
+		return getQueryResult(ctx, selector);
+	}
+
+	@Transaction(intent = Transaction.TYPE.EVALUATE)
 	public Diploma[] queryDiplomasByName(final Context ctx, final String firstName, final String lastName)
 			throws Exception, UnsupportedOperationException {
 		String selector = String.format(
@@ -148,7 +158,6 @@ public class DiplomaContract implements ContractInterface {
 
 			for (KeyValue result : results) {
 				if (result.getStringValue() == null || result.getStringValue().length() == 0) {
-					System.out.println("HERE!");
 					continue;
 				}
 				Diploma diploma = genson.deserialize(result.getStringValue(), Diploma.class);

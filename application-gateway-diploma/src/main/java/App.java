@@ -131,6 +131,8 @@ public final class App {
 		while (true) {
 			System.out.println("Enter: r to read diploma by ID");
 			System.out.println("       a to read all diplomas");
+			System.out.println(
+					"       p to read diploma by nationalID, institution, course, level (i.e. the primary key)");
 			System.out.println("       n to read diploma by the owner's name");
 			System.out.println("       i to read diploma by the owner's national ID");
 			System.out.println("       s to create a single diploma by student ID");
@@ -144,19 +146,29 @@ public final class App {
 			if (str.equals("r")) {
 				System.out.println("Insert diploma ID:");
 				String diplomaID = sc.nextLine();
-				readDiploma(diplomaID);
+				System.out.println(readDiploma(diplomaID));
 			} else if (str.equals("a")) {
-				getAllDiplomas();
+				System.out.println(getAllDiplomas());
+			} else if (str.equals("p")) {
+				System.out.println("Insert national ID:");
+				String nationalID = sc.nextLine();
+				System.out.println("Insert institution:");
+				String institution = sc.nextLine();
+				System.out.println("Insert course:");
+				String course = sc.nextLine();
+				System.out.println("Insert level:");
+				String level = sc.nextLine();
+				System.out.println(readDiplomaByPrimKey(nationalID, institution, course, level));
 			} else if (str.equals("n")) {
 				System.out.println("Insert first name:");
 				String firstName = sc.nextLine();
 				System.out.println("Insert last name:");
 				String lastName = sc.nextLine();
-				readDiplomaByName(firstName, lastName);
+				System.out.println(readDiplomaByName(firstName, lastName));
 			} else if (str.equals("i")) {
 				System.out.println("Insert national ID:");
 				String nationalID = sc.nextLine();
-				readDiplomaByNationalID(nationalID);
+				System.out.println(readDiplomaByNationalID(nationalID));
 			} else if (str.equals("s")) {
 				System.out.println("Insert student ID:");
 				String studentID = sc.nextLine();
@@ -216,28 +228,35 @@ public final class App {
 		return gson.toJson(parsedJson);
 	}
 
-	private void readDiploma(String diplomaID) throws GatewayException {
+	private String readDiploma(String diplomaID) throws GatewayException {
 
 		var result = contract.evaluateTransaction("readDiploma", diplomaID);
-		System.out.println(prettyJson(result));
+		return prettyJson(result);
 	}
 
-	private void getAllDiplomas() throws GatewayException {
+	private String getAllDiplomas() throws GatewayException {
 
 		var result = contract.evaluateTransaction("getAllDiplomas");
-		System.out.println(prettyJson(result));
+		return prettyJson(result);
 	}
 
-	private void readDiplomaByName(String firstName, String lastName) throws GatewayException {
+	private String readDiplomaByPrimKey(String nationalID, String institution, String course, String level)
+			throws GatewayException {
+
+		var result = contract.evaluateTransaction("queryDiplomasByPrimKey", nationalID, institution, course, level);
+		return prettyJson(result);
+	}
+
+	private String readDiplomaByName(String firstName, String lastName) throws GatewayException {
 
 		var result = contract.evaluateTransaction("queryDiplomasByName", firstName, lastName);
-		System.out.println(prettyJson(result));
+		return prettyJson(result);
 	}
 
-	private void readDiplomaByNationalID(String nationalID) throws GatewayException {
+	private String readDiplomaByNationalID(String nationalID) throws GatewayException {
 
 		var result = contract.evaluateTransaction("queryDiplomasByNationalID", nationalID);
-		System.out.println(prettyJson(result));
+		return prettyJson(result);
 	}
 
 	private void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
@@ -315,6 +334,12 @@ public final class App {
 			c.close();
 			System.out.println("... data from relational database retreived ...");
 
+			System.out.println("... checking if diploma already exists ...");
+			String fromLedger = readDiplomaByPrimKey(nationalID, institution, courseName, levelOfStudy);
+			if (!fromLedger.equals("[]")) {
+				throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
+			}
+
 			String diplomaID = "diploma" + Instant.now().toEpochMilli();
 			contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
 					dateOfBirth.toString(), placeOfBirth,
@@ -330,6 +355,8 @@ public final class App {
 		try {
 			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
 			Statement stmt = c.createStatement();
+
+			System.out.println("... querying the local relational database ...");
 
 			ResultSet rs = stmt.executeQuery(
 					"SELECT institutionID, courseID, studentID, degree " +
@@ -391,6 +418,12 @@ public final class App {
 				Date dateOfBirth = rs2.getDate("dateOfBirth");
 				String placeOfBirth = rs2.getString("placeOfBirth");
 
+				System.out.println("... creating diploma for " + nationalID + " ...");
+				String fromLedger = readDiplomaByPrimKey(nationalID, institution, courseName, levelOfStudy);
+				if (!fromLedger.equals("[]")) {
+					throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
+				}
+
 				String diplomaID = "diploma" + Instant.now().toEpochMilli();
 				contract.submitTransaction("createDiploma", diplomaID, nationalID, firstName, lastName,
 						dateOfBirth.toString(), placeOfBirth,
@@ -414,6 +447,7 @@ public final class App {
 		try {
 			contract.evaluateTransaction("updateDiploma", diplomaID, nationalID, firstName, lastName,
 					dateOfBirth, placeOfBirth, dateOfIssue, institution, course, level, degree);
+			System.out.println("Update successful");
 		} catch (Exception e) {
 			System.out.println("ERROR while updating diploma: " + e.getMessage());
 		}
@@ -423,6 +457,7 @@ public final class App {
 
 		try {
 			contract.submitTransaction("deleteDiploma", diplomaID);
+			System.out.println("Delete successful");
 		} catch (Exception e) {
 			System.out.println("ERROR while deleting diploma: " + e.getMessage());
 		}
