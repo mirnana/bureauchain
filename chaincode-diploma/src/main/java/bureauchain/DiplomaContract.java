@@ -21,7 +21,13 @@ import java.util.List;
 
 import com.owlike.genson.Genson;
 
-@Contract(name = "DiplomaContract", info = @Info(title = "Diploma Contract", description = "A smart contract that represents a college diploma being issued"))
+@Contract(
+	name = "DiplomaContract", 
+	info = @Info(
+		title = "Diploma Contract", 
+		description = "A smart contract that represents a college diploma being issued"
+	)
+)
 @Default
 public class DiplomaContract implements ContractInterface {
 
@@ -31,13 +37,15 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public boolean diplomaExists(final Context ctx, final String diplomaID) {
+	public boolean diplomaExists( final Context ctx
+								, final String diplomaID) {
 		String diplomaJSON = ctx.getStub().getStringState(diplomaID);
 		return (diplomaJSON != null && !diplomaJSON.isEmpty());
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public Diploma readDiploma(final Context ctx, final String diplomaID) {
+	public Diploma readDiploma(   final Context ctx
+								, final String diplomaID) {
 		Diploma diploma = null;
 		try {
 			if (!diplomaExists(ctx, diplomaID)) {
@@ -57,36 +65,68 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
-	public void createDiploma(Context ctx, String diplomaID, String nationalID, String firstName, String lastName,
-			String dateOfBirth, String placeOfBirth, String dateOfIssue, String institution,
-			String course, String level, String degree) {
+	public void createDiploma(Context ctx
+							, String diplomaID
+							, String nationalID
+							, String firstName
+							, String lastName
+							, String dateOfBirth
+							, String placeOfBirth
+							, String dateOfIssue
+							, String institution
+							, String course
+							, String level
+							, String degree) {
 
 		if (diplomaExists(ctx, diplomaID)) {
 			throw new ChaincodeException("The diploma " + diplomaID + " already exists");
 		}
 
-		Diploma diploma = new Diploma(
-				diplomaID, nationalID, firstName, lastName, dateOfBirth, placeOfBirth, dateOfIssue, institution,
-				course, level, degree);
+		Diploma diploma = new Diploma(diplomaID
+									, nationalID
+									, firstName
+									, lastName
+									, dateOfBirth
+									, placeOfBirth
+									, dateOfIssue
+									, institution
+									, course
+									, level
+									, degree);
 
 		String sortedJSON = genson.serialize(diploma);
 		ctx.getStub().putStringState(diplomaID, sortedJSON);
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
-	public void updateDiploma(Context ctx, String diplomaID, String newNationalID, String newFirstName,
-			String newLastName,
-			String newDateOfBirth, String newPlaceOfBirth, String newDateOfIssue, String newInstitution,
-			String newCourse, String newLevel, String newDegree) {
+	public void updateDiploma(Context ctx
+							, String diplomaID
+							, String newNationalID
+							, String newFirstName
+							, String newLastName
+							, String newDateOfBirth
+							, String newPlaceOfBirth
+							, String newDateOfIssue
+							, String newInstitution
+							, String newCourse
+							, String newLevel
+							, String newDegree) {
 
 		if (!diplomaExists(ctx, diplomaID)) {
 			throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
 		}
 
-		Diploma diploma = new Diploma(
-				diplomaID, newNationalID, newFirstName, newLastName, newDateOfBirth, newPlaceOfBirth, newDateOfIssue,
-				newInstitution,
-				newCourse, newLevel, newDegree);
+		Diploma diploma = new Diploma(diplomaID
+									, newNationalID
+									, newFirstName
+									, newLastName
+									, newDateOfBirth
+									, newPlaceOfBirth
+									, newDateOfIssue
+									, newInstitution
+									, newCourse
+									, newLevel
+									, newDegree);
 
 		String sortedJSON = genson.serialize(diploma);
 		ctx.getStub().putStringState(diplomaID, sortedJSON);
@@ -122,35 +162,63 @@ public class DiplomaContract implements ContractInterface {
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public Diploma[] queryDiplomasByPrimKey(final Context ctx, final String nationalID, final String institution,
-			final String course, final String level)
-			throws Exception, UnsupportedOperationException {
+	public Diploma[] queryDiplomasByPrimKey(  final Context ctx
+											, final String nationalID
+											, final String institution
+											, final String course
+											, final String level) throws Exception, UnsupportedOperationException {
+
 		String selector = String.format(
-				"{\"selector\":{\"nationalID\":\"%s\",\"institution\":\"%s\",\"course\":\"%s\",\"level\":\"%s\"}, \"use_index\":[\"/indexPrimKeyDoc\", \"indexPrimKey\"]}",
-				nationalID, institution, course, level);
+				"{\"selector\":" + 
+					"{\"nationalID\":\"%s\"," + 
+					"\"institution\":\"%s\"," +
+					"\"course\":\"%s\"," + 
+					"\"level\":\"%s\"}, " + 
+				"\"use_index\":" + 
+					"[\"/indexPrimKeyDoc\", " + 
+					"\"indexPrimKey\"]}"
+				
+				, nationalID
+				, institution
+				, course
+				, level);
 		return getQueryResult(ctx, selector);
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public Diploma[] queryDiplomasByName(final Context ctx, final String firstName, final String lastName)
-			throws Exception, UnsupportedOperationException {
+	public Diploma[] queryDiplomasByName( final Context ctx
+										, final String firstName
+										, final String lastName) throws Exception, UnsupportedOperationException {
+		
 		String selector = String.format(
-				"{\"selector\":{\"firstName\":\"%s\",\"lastName\":\"%s\"}, \"use_index\":[\"/indexNameDoc\", \"indexName\"]}",
-				firstName, lastName);
+				"{\"selector\":" + 
+					"{\"firstName\":\"%s\"," + 
+					"\"lastName\":\"%s\"}, " + 
+				"\"use_index\":" + 
+					"[\"/indexNameDoc\", " + 
+					"\"indexName\"]}"
+					
+				, firstName
+				, lastName);
 		return getQueryResult(ctx, selector);
 	}
 
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
-	public Diploma[] queryDiplomasByNationalID(final Context ctx, final String nationalID)
-			throws Exception, UnsupportedOperationException {
+	public Diploma[] queryDiplomasByNationalID(final Context ctx
+											 , final String nationalID) throws Exception, UnsupportedOperationException {
 		String selector = String.format(
-				"{\"selector\":{\"nationalID\":\"%s\"}, \"use_index\":[\"/indexNationalIDDoc\", \"indexNationalID\"]}",
-				nationalID);
+				"{\"selector\":" + 
+					"{\"nationalID\":\"%s\"}, " + 
+				"\"use_index\":" + 
+					"[\"/indexNationalIDDoc\", " + 
+					"\"indexNationalID\"]}"
+					
+				, nationalID);
 		return getQueryResult(ctx, selector);
 	}
 
-	private Diploma[] getQueryResult(final Context ctx, final String selector)
-			throws Exception, UnsupportedOperationException {
+	private Diploma[] getQueryResult( final Context ctx
+									, final String selector) throws Exception, UnsupportedOperationException {
 
 		List<Diploma> queryResults = new ArrayList<Diploma>();
 
