@@ -18,7 +18,7 @@ When you clone this repository, navigate to its root and run the following comma
 
 ```bash
 curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
-./install-fabric.sh --version 2.5.4
+./install-fabric.sh --fabric-version 2.5.4
 ```
  
 This will create a `fabric-samples` directory that contains all the necessary binaries, Docker images and some samples -- including the test-network.
@@ -46,7 +46,7 @@ If the chaincode is successfully deployed, you can try out one or both the gatew
 
 ```bash
 cd ../../application-gateway-diploma/
-./gradlew run
+./gradlew run --console=plain
 ```
 
 When you are done using the apps and the network, navigate back to `fabric-samples/test-network` and tear down the network:
@@ -55,3 +55,10 @@ When you are done using the apps and the network, navigate back to `fabric-sampl
 cd ../fabric-samples/test-network/
 ./network.sh down
 ```
+
+## References
+
+- [Fabric Docs 2.5](https://hyperledger-fabric.readthedocs.io/en/release-2.5/index.html)
+- [Fabric Chaincode API](https://hyperledger.github.io/fabric-chaincode-java/)
+- [Fabric Gateway API](https://hyperledger.github.io/fabric-gateway/)
+- [Fabric Samples](https://github.com/hyperledger/fabric-samples)
