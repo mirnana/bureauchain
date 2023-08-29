@@ -129,39 +129,4 @@ public class Diploma {
 		this.degree = degree;
 	}
 
-	public String toJSONString() {
-		return new JSONObject(this).toString();
-	}
-
-	public static Diploma fromJSONString(String json) {
-
-		JSONObject jsonObj 	= new JSONObject(json);
-
-		String diplomaID 	= jsonObj.getString("diplomaID");
-
-		String nationalID 	= jsonObj.getString("nationalID");
-		String firstName 	= jsonObj.getString("firstName");
-		String lastName		= jsonObj.getString("lastName");
-		String dateOfBirth 	= jsonObj.getString("dateOfBirth");
-		String placeOfBirth	= jsonObj.getString("placeOfBirth");
-		String dateOfIssue 	= jsonObj.getString("dateOfIssue");
-
-		String institution 	= jsonObj.getString("institution");
-		String course 		= jsonObj.getString("course");
-		String level 		= jsonObj.getString("level");
-		String degree 		= jsonObj.getString("degree");
-
-		Diploma asset = new Diploma(  diplomaID
-									, nationalID
-									, firstName
-									, lastName
-									, dateOfBirth
-									, placeOfBirth
-									, dateOfIssue
-									, institution
-									, course
-									, level
-									, degree);
-		return asset;
-	}
 }

@@ -145,7 +145,6 @@ public class DiplomaContract implements ContractInterface {
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
 	public String getAllDiplomas(final Context ctx) {
 
-		// ChaincodeStub stub = ctx.getStub();
 		List<Diploma> queryResults = new ArrayList<Diploma>();
 
 		QueryResultsIterator<KeyValue> results = ctx.getStub().getStateByRange("", "");
