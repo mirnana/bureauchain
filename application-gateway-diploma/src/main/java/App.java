@@ -29,7 +29,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.concurrent.TimeUnit;
+
+import javax.naming.spi.DirStateFactory.Result;
+
 import java.util.Scanner;
+import java.util.Map;
+import java.util.HashMap;
 import java.sql.*;
 
 public final class App {
@@ -287,77 +292,155 @@ public final class App {
 		return prettyJson(result);
 	}
 
+	private Map<String, String> fromStudentPrepStmtResults(String studentID) throws SQLException, Exception {
+		Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+		PreparedStatement stmt = c.prepareStatement(
+			"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth, institutionID " +
+			"  FROM student " +
+			" WHERE studentID = ?;"
+		);
+		stmt.setString(1, studentID);
+		ResultSet rs = stmt.executeQuery();
+
+		int rowCount = 0;
+		if (rs.last()) {
+			rowCount = rs.getRow();
+		}
+		if (rowCount == 0) {
+			throw new Exception("Student with studentID " + studentID + " does not exist");
+		}
+		
+		rs.first(); // only one row expected as 'studentID' is the primary key
+		Map<String, String> attributes = new HashMap<>();
+		attributes.put("nationalID", rs.getString("nationalID"));
+		attributes.put("firstName", rs.getString("firstName"));
+		attributes.put("lastName", rs.getString("lastName"));
+		attributes.put("dateOfBirth", rs.getString("dateOfBirth"));
+		attributes.put("placeOfBirth", rs.getString("placeOfBirth"));
+		attributes.put("institutionID", rs.getString("institutionID"));
+
+		c.close();
+		return attributes;
+	}
+
+	private Map<String, String> fromCoursePrepStmtResults(Integer courseID, Integer institutuionID) throws SQLException {
+		Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+		PreparedStatement stmt = c.prepareStatement(
+			"SELECT courseName, levelOfStudy " +
+			"  FROM course " +
+			" WHERE courseID = ?" +
+			"   AND institutionID = ?;"
+		);
+		stmt.setInt(1, courseID);
+		stmt.setInt(2, institutuionID);
+		ResultSet rs = stmt.executeQuery();
+		
+		rs.first();
+		Map<String, String> attributes = new HashMap<>();
+		attributes.put("courseName", rs.getString("courseName"));
+		attributes.put("levelOfStudy", rs.getString("levelOfStudy"));
+
+		c.close();
+		return attributes;
+	}
+
+	private Map<String, String> fromInstitutionPrepStmtResults(Integer institutionID) throws SQLException {
+		Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+		PreparedStatement stmt = c.prepareStatement(
+			"SELECT institutionName, parentInstitutionID " +
+			"  FROM institution " +
+			" WHERE institutionID = ?;"
+		);
+		stmt.setInt(1, institutionID);
+		ResultSet rs = stmt.executeQuery();
+
+		rs.first();
+		Map<String, String> attributes = new HashMap<>();
+		attributes.put("institutionName", rs.getString("institutionName"));
+		attributes.put("parentInstitutionID", rs.getString("parentInstitutionID"));
+
+		c.close();
+		return attributes;
+	}
+
+	private Map<String, String> fromDefenceOfThesisPrepStmtResult(Integer institutionID
+																, String studentID) throws SQLException, Exception {
+		Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+		PreparedStatement stmt = c.prepareStatement(
+			"SELECT courseID, degree " +
+			"  FROM defenceOfThesis " +
+			" WHERE institutionID = ? " +
+			"   AND studentID = ? " +
+			"	AND grade IS NOT NULL " +
+			"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
+			"LIMIT 1;"
+		);
+		stmt.setInt(1, institutionID);
+		stmt.setString(2, studentID);
+		ResultSet rs = stmt.executeQuery();
+		
+		int rowCount = 0;
+		if (rs.last()) {
+			rowCount = rs.getRow();
+		}
+		if (rowCount == 0) {
+			throw new Exception("Student with studentID " + studentID + " has not defended any theses");
+		}
+		
+		rs.first(); // only one row expected because of LIMIT 1 in the query
+		Map<String, String> attributes = new HashMap<>();
+		attributes.put("courseID", rs.getString("courseID"));
+		attributes.put("degree", rs.getString("degree"));
+
+		c.close();
+		return attributes;
+	}
+
 	private void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
 		try {
 			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
 			Statement stmt = c.createStatement();
 
 			System.out.println("... querying the local relational database ...");
-			ResultSet rs = stmt.executeQuery(
-					"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth, institutionID " +
-					"  FROM student " +
-					" WHERE studentID = '" + studentID + "' ;");
-			int rowCount = 0;
-			if (rs.last()) {
-				rowCount = rs.getRow();
-			}
-			if (rowCount == 0) {
-				throw new Exception("Student with studentID " + studentID + " does not exist");
-			}
-			rs.first(); // only one row expected as 'studentID' is the primary key
-			String nationalID 		= rs.getString("nationalID");
-			String firstName 		= rs.getString("firstName");
-			String lastName 		= rs.getString("lastName");
-			Date dateOfBirth 		= rs.getDate("dateOfBirth");
-			String placeOfBirth 	= rs.getString("placeOfBirth");
-			String institutionID 	= rs.getString("institutionID");
+			ResultSet rs;
+			
+			Map<String, String> studentAttributes = new HashMap(fromStudentPrepStmtResults(studentID));
+			String nationalID 		= studentAttributes.get("nationalID");
+			String firstName 		= studentAttributes.get("firstName");
+			String lastName 		= studentAttributes.get("lastName");
+			String dateOfBirth 		= studentAttributes.get("dateOfBirth");
+			String placeOfBirth 	= studentAttributes.get("placeOfBirth");
+			String institutionID 	= studentAttributes.get("institutionID");
 			String institutionID2 	= institutionID;
 
 			String institution 			= "";
 			String parentInstitutionID 	= "";
 			boolean firstIteration 		= true;
 			do {
-				rs = stmt.executeQuery(
-						"SELECT institutionName, parentInstitutionID " +
-						"  FROM institution " +
-						" WHERE institutionID = '" + institutionID + "' ;");
-				rs.first();
-				if (firstIteration) {
+				Map<String, String> institutionAttributes = new HashMap<>(
+					fromInstitutionPrepStmtResults(Integer.parseInt(institutionID)));
+				
+					if (firstIteration) {
 					firstIteration = false;
 				} else {
 					institution += ", ";
 				}
-				institution += rs.getString("institutionName");
-				institutionID = parentInstitutionID = rs.getString("parentInstitutionID");
+				
+				institution += institutionAttributes.get("institutionName");
+				institutionID 	= parentInstitutionID 
+								= institutionAttributes.get("parentInstitutionID");
 			} while (parentInstitutionID != null);
 
-			rs = stmt.executeQuery(
-					"SELECT courseID, degree " +
-					"  FROM defenceOfThesis " +
-					" WHERE institutionID = '" + institutionID2 + "' " +
-					"   AND studentID = '" + studentID + "' " +
-					"	AND grade IS NOT NULL " +
-					"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
-					"LIMIT 1;");
-			rowCount = 0;
-			if (rs.last()) {
-				rowCount = rs.getRow();
-			}
-			if (rowCount == 0) {
-				throw new Exception("Student with studentID " + studentID + " has not defended any theses");
-			}
-			rs.first();
-			String courseID = rs.getString("courseID");
-			String degree 	= rs.getString("degree");
+			Map<String, String> defenceAttributes = new HashMap<>(
+				fromDefenceOfThesisPrepStmtResult(Integer.parseInt(institutionID2), studentID));
+			String courseID = defenceAttributes.get("courseID");
+			String degree = defenceAttributes.get("degree");
+			
 
-			rs = stmt.executeQuery(
-					"SELECT courseName, levelOfStudy " +
-					"  FROM course " +
-					" WHERE courseID = '" + courseID + "' " +
-					"   AND institutionID = '" + institutionID2 + "' ;");
-			rs.first();
-			String courseName = rs.getString("courseName");
-			String levelOfStudy = rs.getString("levelOfStudy");
+			Map<String, String> courseAttributes = new HashMap<>(
+				fromCoursePrepStmtResults(Integer.parseInt(courseID), Integer.parseInt(institutionID2)));
+			String courseName 	= courseAttributes.get("courseName");
+			String levelOfStudy = courseAttributes.get("levelOfStudy");
 
 			c.close();
 			System.out.println("... data from relational database retreived ...");
@@ -394,15 +477,16 @@ public final class App {
 	private void createDiplomasByDateOfDefence(String dateOfDefence) {
 		try {
 			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-			Statement stmt = c.createStatement();
-
 			System.out.println("... querying the local relational database ...");
+			PreparedStatement stmt = c.prepareStatement(	
+				"SELECT institutionID, courseID, studentID, degree " +
+				"  FROM defenceOfThesis " +
+				" WHERE dateOfDefence = ? " +
+				"   AND grade IS NOT NULL;"
+			);
+			stmt.setString(1, dateOfDefence);
+			ResultSet rs = stmt.executeQuery();
 
-			ResultSet rs = stmt.executeQuery(
-					"SELECT institutionID, courseID, studentID, degree " +
-					"  FROM defenceOfThesis " +
-					" WHERE dateOfDefence = '" + dateOfDefence + "' " +
-					"   AND grade IS NOT NULL;");
 			int rowCount = 0;
 			if (rs.last()) {
 				rowCount = rs.getRow();
@@ -424,39 +508,29 @@ public final class App {
 				String parentInstitutionID 	= "";
 				boolean firstIteration 		= true;
 				do {
-					ResultSet rs2 = stmt2.executeQuery(
-							"SELECT institutionName, parentInstitutionID " +
-							"  FROM institution " +
-							" WHERE institutionID = '" + institutionID + "' ;");
-					rs2.first();
+					Map<String, String> institutionAttributes = new HashMap<>(
+						fromInstitutionPrepStmtResults(Integer.parseInt(institutionID)));
+
 					if (firstIteration) {
 						firstIteration = false;
 					} else {
 						institution += ", ";
 					}
-					institution += rs2.getString("institutionName");
-					institutionID = parentInstitutionID = rs2.getString("parentInstitutionID");
+					
+					institution += institutionAttributes.get("institutionName");
+					institutionID = parentInstitutionID = institutionAttributes.get("parentInstitutionID");
 				} while (parentInstitutionID != null);
 
-				ResultSet rs2 = stmt2.executeQuery(
-						"SELECT courseName, levelOfStudy " +
-						"  FROM course " +
-						" WHERE courseID = " + courseID +
-						"   AND institutionID = " + institutionID2 + ";");
-				rs2.first();
-				String courseName 	= rs2.getString("courseName");
-				String levelOfStudy = rs2.getString("levelOfStudy");
+				Map<String, String> courseAttributes = new HashMap<>(fromCoursePrepStmtResults(Integer.parseInt(courseID), Integer.parseInt(institutionID2)));
+				String courseName 	= courseAttributes.get("courseName");
+				String levelOfStudy = courseAttributes.get("levelOfStudy");
 
-				rs2 = stmt2.executeQuery(
-						"SELECT nationalID, firstName, lastName, dateOfBirth, placeOfBirth " +
-						"  FROM student " +
-						" WHERE studentID = '" + studentID + "' ;");
-				rs2.first();
-				String nationalID 	= rs2.getString("nationalID");
-				String firstName 	= rs2.getString("firstName");
-				String lastName 	= rs2.getString("lastName");
-				Date dateOfBirth 	= rs2.getDate("dateOfBirth");
-				String placeOfBirth = rs2.getString("placeOfBirth");
+				Map<String, String> studentAttributes = new HashMap(fromStudentPrepStmtResults(studentID));
+				String nationalID 		= studentAttributes.get("nationalID");
+				String firstName 		= studentAttributes.get("firstName");
+				String lastName 		= studentAttributes.get("lastName");
+				String dateOfBirth 		= studentAttributes.get("dateOfBirth");
+				String placeOfBirth 	= studentAttributes.get("placeOfBirth");
 
 				System.out.println("... creating diploma for " + nationalID + " ...");
 				String fromLedger = readDiplomaByPrimKey( nationalID
