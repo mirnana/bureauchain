@@ -46,22 +46,14 @@ public class DiplomaContract implements ContractInterface {
 	@Transaction(intent = Transaction.TYPE.EVALUATE)
 	public Diploma readDiploma(   final Context ctx
 								, final String diplomaID) {
-		Diploma diploma = null;
-		try {
-			if (!diplomaExists(ctx, diplomaID)) {
-				String err = "The diploma " + diplomaID + " does not exist";
-				System.out.println(err);
-				throw new ChaincodeException(err, err);
-			}
 
-			String diplomaJSON = ctx.getStub().getStringState(diplomaID);
-			System.out.println(diplomaJSON);
-			diploma = genson.deserialize(diplomaJSON, Diploma.class);
-			return diploma;
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new ChaincodeException(e.toString());
-		}
+        if (!diplomaExists(ctx, diplomaID)) {
+            throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
+        }
+
+        String diplomaJSON = ctx.getStub().getStringState(diplomaID);
+        Diploma diploma = genson.deserialize(diplomaJSON, Diploma.class);
+        return diploma;
 	}
 
 	@Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -113,7 +105,7 @@ public class DiplomaContract implements ContractInterface {
 							, String newDegree) {
 
 		if (!diplomaExists(ctx, diplomaID)) {
-			throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
+            throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
 		}
 
 		Diploma diploma = new Diploma(diplomaID
@@ -136,7 +128,7 @@ public class DiplomaContract implements ContractInterface {
 	public void deleteDiploma(Context ctx, String diplomaID) {
 
 		if (!diplomaExists(ctx, diplomaID)) {
-			throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
+            throw new ChaincodeException("The diploma " + diplomaID + " does not exist");
 		}
 
 		ctx.getStub().delState(diplomaID);

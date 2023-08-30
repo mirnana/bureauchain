@@ -42,7 +42,7 @@ This command runs the peers with CouchDB as the state database and Hyperledger's
 
 The flag `-ccep` sets the endorsement policy so that each organization's peer can create an asset without the other organization's endorsement. 
 
-If the chaincode is successfully deployed, you can try out one or both the gateway apps. For example:
+Once the chaincode is successfully deployed and you made sure that the MySQL database server is running, you can try out one or both the gateway apps. For example:
 
 ```bash
 cd ../../application-gateway-diploma/

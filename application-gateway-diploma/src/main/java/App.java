@@ -139,11 +139,11 @@ public final class App {
 		while (true) {
 			System.out.println("Enter: r to read diploma by ID");
 			System.out.println("       a to read all diplomas");
-			System.out.println("       p to read diploma by nationalID, institution, course, level (i.e. the primary key)");
+			System.out.println("       p to read diploma by the 'primary key'");
 			System.out.println("       n to read diploma by the owner's name");
 			System.out.println("       i to read diploma by the owner's national ID");
-			System.out.println("       s to create a single diploma by student ID");
-			System.out.println("       t to create multiple diplomas by date of defence of thesis");
+			System.out.println("       s to create diplomas by student ID");
+			System.out.println("       t to create diplomas by date of defence of thesis");
 			System.out.println("       u to update a diploma");
 			System.out.println("       d to delete a diploma");
 			System.out.println("       x to exit");
@@ -362,47 +362,11 @@ public final class App {
 		c.close();
 		return attributes;
 	}
-
-	private Map<String, String> fromDefenceOfThesisPrepStmtResult(Integer institutionID
-																, String studentID) throws SQLException, Exception {
-		Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-		PreparedStatement stmt = c.prepareStatement(
-			"SELECT courseID, degree " +
-			"  FROM defenceOfThesis " +
-			" WHERE institutionID = ? " +
-			"   AND studentID = ? " +
-			"	AND grade IS NOT NULL " +
-			"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC " +
-			"LIMIT 1;"
-		);
-		stmt.setInt(1, institutionID);
-		stmt.setString(2, studentID);
-		ResultSet rs = stmt.executeQuery();
-		
-		int rowCount = 0;
-		if (rs.last()) {
-			rowCount = rs.getRow();
-		}
-		if (rowCount == 0) {
-			throw new Exception("Student with studentID " + studentID + " has not defended any theses");
-		}
-		
-		rs.first(); // only one row expected because of LIMIT 1 in the query
-		Map<String, String> attributes = new HashMap<>();
-		attributes.put("courseID", rs.getString("courseID"));
-		attributes.put("degree", rs.getString("degree"));
-
-		c.close();
-		return attributes;
-	}
-
+	
 	private void createDiplomaByStudentID(String studentID) throws SQLException, Exception {
 		try {
-			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
-			Statement stmt = c.createStatement();
 
 			System.out.println("... querying the local relational database ...");
-			ResultSet rs;
 			
 			Map<String, String> studentAttributes = new HashMap(fromStudentPrepStmtResults(studentID));
 			String nationalID 		= studentAttributes.get("nationalID");
@@ -430,44 +394,66 @@ public final class App {
 				institutionID 	= parentInstitutionID 
 								= institutionAttributes.get("parentInstitutionID");
 			} while (parentInstitutionID != null);
-
-			Map<String, String> defenceAttributes = new HashMap<>(
-				fromDefenceOfThesisPrepStmtResult(Integer.parseInt(institutionID2), studentID));
-			String courseID = defenceAttributes.get("courseID");
-			String degree = defenceAttributes.get("degree");
 			
-
-			Map<String, String> courseAttributes = new HashMap<>(
-				fromCoursePrepStmtResults(Integer.parseInt(courseID), Integer.parseInt(institutionID2)));
-			String courseName 	= courseAttributes.get("courseName");
-			String levelOfStudy = courseAttributes.get("levelOfStudy");
-
-			c.close();
-			System.out.println("... data from relational database retreived ...");
-
-			System.out.println("... checking if diploma already exists ...");
-			String fromLedger = readDiplomaByPrimKey( nationalID
-													, institution
-													, courseName
-													, levelOfStudy);
-			if (!fromLedger.equals("[]")) {
-				throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
+			Connection c = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+			PreparedStatement stmt = c.prepareStatement(
+				"SELECT courseID, degree " +
+				"  FROM defenceOfThesis " +
+				" WHERE institutionID = ? " +
+				"   AND studentID = ? " +
+				"	AND grade IS NOT NULL " +
+				"ORDER BY dueDate DESC, dateOfDefence DESC, seq DESC;"
+			);
+			stmt.setInt(1, Integer.parseInt(institutionID2));
+			stmt.setString(2, studentID);
+			ResultSet rs = stmt.executeQuery();
+			
+			int rowCount = 0;
+			if (rs.last()) {
+				rowCount = rs.getRow();
+				rs.beforeFirst();
+			}
+			if (rowCount == 0) {
+				throw new Exception("Student with studentID " + studentID + " has not defended any theses");
+			}
+			while(rs.next()){
+				String courseID = rs.getString("courseID");
+				String degree = rs.getString("degree");
+				
+				Map<String, String> courseAttributes = new HashMap<>(
+					fromCoursePrepStmtResults(Integer.parseInt(courseID), Integer.parseInt(institutionID2)));
+				String courseName 	= courseAttributes.get("courseName");
+				String levelOfStudy = courseAttributes.get("levelOfStudy");
+				
+				System.out.println("... data from relational database retreived ...");
+	
+				System.out.println("... checking if diploma already exists ...");
+				String fromLedger = readDiplomaByPrimKey( nationalID
+														, institution
+														, courseName
+														, levelOfStudy);
+				if (!fromLedger.equals("[]")) {
+					System.out.println("Diploma with the given parameters already exists: " + fromLedger);
+					continue;
+				}
+	
+				String diplomaID = "diploma" + Instant.now().toEpochMilli();
+				contract.submitTransaction("createDiploma"
+										, diplomaID
+										, nationalID
+										, firstName
+										, lastName
+										, dateOfBirth.toString()
+										, placeOfBirth
+										, LocalDate.now().toString()
+										, institution
+										, courseName
+										, levelOfStudy
+										, degree);
+				System.out.println("Successfully created new diploma " + diplomaID);
 			}
 
-			String diplomaID = "diploma" + Instant.now().toEpochMilli();
-			contract.submitTransaction("createDiploma"
-									, diplomaID
-									, nationalID
-									, firstName
-									, lastName
-									, dateOfBirth.toString()
-									, placeOfBirth
-									, LocalDate.now().toString()
-									, institution
-									, courseName
-									, levelOfStudy
-									, degree);
-			System.out.println("Successfully created new diploma " + diplomaID);
+			c.close();
 
 		} catch (Exception e) {
 			System.out.println("ERROR while creating diploma by ID: " + e.getMessage());
@@ -538,7 +524,8 @@ public final class App {
 														, courseName
 														, levelOfStudy);
 				if (!fromLedger.equals("[]")) {
-					throw new Exception("Diploma with the given parameters already exists: " + fromLedger);
+					System.out.println("Diploma with the given parameters already exists: " + fromLedger);
+					continue;
 				}
 
 				String diplomaID = "diploma" + Instant.now().toEpochMilli();
@@ -591,7 +578,12 @@ public final class App {
 									, level
 									, degree);
 			System.out.println("Update successful");
-		} catch (Exception e) {
+		} catch(EndorseException | SubmitException | CommitStatusException e) {
+			System.out.println("ERROR while updating diploma: ");
+			for(var detail : e.getDetails())
+				System.out.println(detail.getMessage());
+		}
+		catch (Exception e) {
 			System.out.println("ERROR while updating diploma: " + e.getMessage());
 		}
 	}
@@ -601,7 +593,12 @@ public final class App {
 		try {
 			contract.submitTransaction("deleteDiploma", diplomaID);
 			System.out.println("Delete successful");
-		} catch (Exception e) {
+		} catch(EndorseException | SubmitException | CommitStatusException e) {
+			System.out.println("ERROR while deleting diploma: ");
+			for(var detail : e.getDetails())
+				System.out.println(detail.getMessage());
+		}
+		catch (Exception e) {
 			System.out.println("ERROR while deleting diploma: " + e.getMessage());
 		}
 	}
